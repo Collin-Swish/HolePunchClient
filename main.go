@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"crypto/aes"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -15,7 +16,7 @@ import (
 	"time"
 )
 
-func negotiate_connection(connection_name string) (*EncryptedConn, error) {
+func negotiate_connection(connection_name string) (*SymmetricEncryptedConn, error) {
 	addr := net.UDPAddr{
 		IP:   net.ParseIP("172.232.24.105"),
 		Port: 2001,
@@ -66,13 +67,17 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	// handle_peer(peer)
+	if args[2] == "-i" {
+		handle_peer(peer)
+		os.Exit(0)
+	}
 	if args[2] == "-u" {
 		msg_buf := make([]byte, 32)
 		peer.Write([]byte("FILE"))
 		var n = 0
 		n, _ = peer.Read(msg_buf)
 		reply := string(msg_buf[:n])
+		fmt.Println(reply, len(reply))
 		if reply != "ACK" {
 			fmt.Println("Failure to confirm")
 			os.Exit(1)
@@ -83,10 +88,9 @@ func main() {
 			os.Exit(1)
 		}
 		for err != io.EOF {
-			buffer := make([]byte, 1024)
+			buffer := make([]byte, 8192)
 			n, err = file.Read(buffer)
-			fmt.Println(n)
-			peer.Write(buffer)
+			peer.Write(buffer[:n])
 			b := make([]byte, 32)
 			peer.Read(b)
 		}
@@ -94,6 +98,7 @@ func main() {
 	if args[2] == "-r" {
 		msg_buf := make([]byte, 32)
 		var n = 1
+		var err error
 		n, _ = peer.Read(msg_buf)
 		msg := string(msg_buf[:n])
 		if msg == "FILE" {
@@ -105,8 +110,12 @@ func main() {
 			os.Exit(1)
 		}
 		for n != 0 {
-			buffer := make([]byte, 2048)
-			n, _ = peer.Read(buffer)
+			buffer := make([]byte, 8192)
+			peer.conn.SetReadDeadline(time.Now().Add(1 * time.Second))
+			n, err = peer.Read(buffer)
+			if err != nil {
+				fmt.Println(err)
+			}
 			fmt.Println(n)
 			peer.Write([]byte("ACK"))
 			file.Write(buffer[:n])
@@ -114,7 +123,7 @@ func main() {
 	}
 }
 
-func handshake(peer *net.UDPConn, leader bool) (*EncryptedConn, error) {
+func handshake(peer *net.UDPConn, leader bool) (*SymmetricEncryptedConn, error) {
 	fmt.Printf("Entering handshake leader: %v\n", leader)
 	attempts := 0
 	for leader && attempts < 10 {
@@ -176,12 +185,37 @@ func handshake(peer *net.UDPConn, leader bool) (*EncryptedConn, error) {
 			pubkey:  pubkey,
 			conn:    peer,
 		}
-		return &enc, nil
+		if leader {
+			symkey := make([]byte, 32)
+			io.ReadFull(rand.Reader, symkey)
+			enc.Write(symkey)
+			block, err := aes.NewCipher(symkey)
+			if err != nil {
+				return nil, err
+			}
+			return &SymmetricEncryptedConn{
+				block: block,
+				conn: peer,
+				key: symkey,
+			}, nil
+		} else {
+			symkey := make([]byte, 32)
+			enc.Read(symkey)
+			block, err := aes.NewCipher(symkey)
+			if err != nil {
+				return nil, err
+			}
+			return &SymmetricEncryptedConn{
+				block: block,
+				conn: peer,
+				key: symkey,
+			}, nil
+		}
 	}
 	return nil, fmt.Errorf("Incorrect command")
 }
 
-func handle_peer(peer *EncryptedConn) {
+func handle_peer(peer *SymmetricEncryptedConn) {
 	input := bufio.NewReader(os.Stdin)
 	go (func() {
 		for {
@@ -191,7 +225,7 @@ func handle_peer(peer *EncryptedConn) {
 				fmt.Println(err)
 				fmt.Println(n)
 			}
-			fmt.Println(string(buffer), n)
+			fmt.Println(string(buffer))
 		}
 	})()
 	for {

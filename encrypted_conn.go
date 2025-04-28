@@ -43,7 +43,7 @@ func NewEncryptedServerConn(conn *net.UDPConn) (*EncryptedConn, error) {
 		return nil, err
 	}
 	sections := strings.Split(string(buffer[:n]), ",")
-	server_public_pem, err := base64.RawStdEncoding.DecodeString(sections[1])
+	server_public_pem, err := base64.StdEncoding.DecodeString(sections[1])
 	if err != nil {
 		return nil, err
 	}
@@ -69,6 +69,7 @@ func (self *EncryptedConn) Close() error {
 
 func (self *EncryptedConn) Write(b []byte) (int, error) {
 	encrypted, err := rsa.EncryptOAEP(sha1.New(), rand.Reader, self.pubkey, b, nil)
+	fmt.Println(self.pubkey.Size())
 	if err != nil {
 		return 0, err
 	}
