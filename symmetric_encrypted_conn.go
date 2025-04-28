@@ -1,4 +1,4 @@
-package main
+package udpconn
 
 import (
 	"crypto/cipher"

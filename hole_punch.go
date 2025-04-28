@@ -1,7 +1,6 @@
-package main
+package udpconn
 
 import (
-	"bufio"
 	"crypto/aes"
 	"crypto/rand"
 	"crypto/rsa"
@@ -60,69 +59,6 @@ func negotiate_connection(connection_name string) (*SymmetricEncryptedConn, erro
 	}
 }
 
-func main() {
-	args := os.Args
-	peer, err := negotiate_connection("hello_go")
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	if args[2] == "-i" {
-		handle_peer(peer)
-		os.Exit(0)
-	}
-	if args[2] == "-u" {
-		msg_buf := make([]byte, 32)
-		peer.Write([]byte("FILE"))
-		var n = 0
-		n, _ = peer.Read(msg_buf)
-		reply := string(msg_buf[:n])
-		fmt.Println(reply, len(reply))
-		if reply != "ACK" {
-			fmt.Println("Failure to confirm")
-			os.Exit(1)
-		}
-		file, err := os.Open(args[3])
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-		for err != io.EOF {
-			buffer := make([]byte, 8192)
-			n, err = file.Read(buffer)
-			peer.Write(buffer[:n])
-			b := make([]byte, 32)
-			peer.Read(b)
-		}
-	}
-	if args[2] == "-r" {
-		msg_buf := make([]byte, 32)
-		var n = 1
-		var err error
-		n, _ = peer.Read(msg_buf)
-		msg := string(msg_buf[:n])
-		if msg == "FILE" {
-			peer.Write([]byte("ACK"))
-		}
-		file, err := os.OpenFile(args[3], os.O_CREATE, os.ModeAppend)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-		for n != 0 {
-			buffer := make([]byte, 8192)
-			peer.conn.SetReadDeadline(time.Now().Add(1 * time.Second))
-			n, err = peer.Read(buffer)
-			if err != nil {
-				fmt.Println(err)
-			}
-			fmt.Println(n)
-			peer.Write([]byte("ACK"))
-			file.Write(buffer[:n])
-		}
-	}
-}
-
 func handshake(peer *net.UDPConn, leader bool) (*SymmetricEncryptedConn, error) {
 	fmt.Printf("Entering handshake leader: %v\n", leader)
 	attempts := 0
@@ -159,7 +95,7 @@ func handshake(peer *net.UDPConn, leader bool) (*SymmetricEncryptedConn, error) 
 			break
 		}
 	}
-	fmt.Println("Handshake complete starting encryption")
+	// fmt.Println("Handshake complete starting encryption")
 	priv_key, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
 		return nil, err
@@ -215,21 +151,3 @@ func handshake(peer *net.UDPConn, leader bool) (*SymmetricEncryptedConn, error) 
 	return nil, fmt.Errorf("Incorrect command")
 }
 
-func handle_peer(peer *SymmetricEncryptedConn) {
-	input := bufio.NewReader(os.Stdin)
-	go (func() {
-		for {
-			buffer := make([]byte, 1024)
-			n, err := peer.Read(buffer)
-			if err != nil {
-				fmt.Println(err)
-				fmt.Println(n)
-			}
-			fmt.Println(string(buffer))
-		}
-	})()
-	for {
-		line, _, _ := input.ReadLine()
-		peer.Write([]byte(line))
-	}
-}
