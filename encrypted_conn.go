@@ -1,4 +1,4 @@
-package udpconn
+package HolePunchClient
 
 import (
 	"crypto/rand"
