@@ -75,10 +75,14 @@ func main() {
 			fmt.Println(err)
 			os.Exit(1)
 		}
+		var n = 0
 		for err != io.EOF {
 			buffer := make([]byte, 1024)
-			_, err = file.Read(buffer)
+			n, err = file.Read(buffer)
+			fmt.Println(n)
 			peer.Write(buffer)
+			b := make([]byte, 32)
+			peer.Read(b) 
 		}
 	}
 	if args[2] == "-r" {
@@ -91,6 +95,8 @@ func main() {
 		for n != 0 {
 			buffer := make([]byte, 2048)
 			n, _ = peer.Read(buffer)
+			fmt.Println(n)
+			peer.Write([]byte("ACK"))
 			file.Write(buffer[:n])
 		}
 	}
