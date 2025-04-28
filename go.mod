@@ -1,3 +1,3 @@
-module hole_client
+module HolepunchClient
 
 go 1.22.1
