@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"strconv"
@@ -18,7 +19,7 @@ import (
 
 func negotiate_connection(connection_name string) (*EncryptedConn, error) {
 	addr := net.UDPAddr {
-		IP: net.ParseIP("127.0.0.1"),
+		IP: net.ParseIP("172.232.24.105"),
 		Port: 2001,
 	}
 	conn, err := net.DialUDP("udp", nil, &addr)
@@ -60,14 +61,39 @@ func negotiate_connection(connection_name string) (*EncryptedConn, error) {
 	}
 }
 
-func main() {
-	
+func main() {	
+	args := os.Args
 	peer, err := negotiate_connection("hello_go")
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	handle_peer(peer)
+	// handle_peer(peer)
+	if args[2] == "-u" {
+		file, err := os.Open(args[3])
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		for err != io.EOF {
+			buffer := make([]byte, 1024)
+			_, err = file.Read(buffer)
+			peer.Write(buffer)
+		}
+	}
+	if args[2] == "-r" {
+		file, err := os.OpenFile(args[3], os.O_CREATE, os.ModeAppend)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		var n = 1
+		for n != 0 {
+			buffer := make([]byte, 2048)
+			n, _ = peer.Read(buffer)
+			file.Write(buffer[:n])
+		}
+	}
 }
 
 func handshake(peer *net.UDPConn, leader bool) (*EncryptedConn, error) {
@@ -142,8 +168,12 @@ func handle_peer(peer *EncryptedConn) {
 	go (func() {
 		for {
 			buffer := make([]byte, 1024)
-			peer.Read(buffer)
-			fmt.Println(string(buffer))
+			n, err := peer.Read(buffer)
+			if err != nil {
+				fmt.Println(err)
+				fmt.Println(n)
+			}
+			fmt.Println(string(buffer), n)
 		}
 	})()
 	for {
