@@ -15,11 +15,9 @@ import (
 	"time"
 )
 
-
-
 func negotiate_connection(connection_name string) (*EncryptedConn, error) {
-	addr := net.UDPAddr {
-		IP: net.ParseIP("172.232.24.105"),
+	addr := net.UDPAddr{
+		IP:   net.ParseIP("172.232.24.105"),
 		Port: 2001,
 	}
 	conn, err := net.DialUDP("udp", nil, &addr)
@@ -47,8 +45,8 @@ func negotiate_connection(connection_name string) (*EncryptedConn, error) {
 				fmt.Println(err)
 				os.Exit(1)
 			}
-			addr := net.UDPAddr {
-				IP: net.ParseIP(sections[1]),
+			addr := net.UDPAddr{
+				IP:   net.ParseIP(sections[1]),
 				Port: peer_port,
 			}
 			peer, err := net.DialUDP("udp", &local, &addr)
@@ -61,7 +59,7 @@ func negotiate_connection(connection_name string) (*EncryptedConn, error) {
 	}
 }
 
-func main() {	
+func main() {
 	args := os.Args
 	peer, err := negotiate_connection("hello_go")
 	if err != nil {
@@ -70,28 +68,42 @@ func main() {
 	}
 	// handle_peer(peer)
 	if args[2] == "-u" {
+		msg_buf := make([]byte, 32)
+		peer.Write([]byte("FILE"))
+		var n = 0
+		n, _ = peer.Read(msg_buf)
+		reply := string(msg_buf[:n])
+		if reply != "ACK" {
+			fmt.Println("Failure to confirm")
+			os.Exit(1)
+		}
 		file, err := os.Open(args[3])
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-		var n = 0
 		for err != io.EOF {
 			buffer := make([]byte, 1024)
 			n, err = file.Read(buffer)
 			fmt.Println(n)
 			peer.Write(buffer)
 			b := make([]byte, 32)
-			peer.Read(b) 
+			peer.Read(b)
 		}
 	}
 	if args[2] == "-r" {
+		msg_buf := make([]byte, 32)
+		var n = 1
+		n, _ = peer.Read(msg_buf)
+		msg := string(msg_buf[:n])
+		if msg == "FILE" {
+			peer.Write([]byte("ACK"))
+		}
 		file, err := os.OpenFile(args[3], os.O_CREATE, os.ModeAppend)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-		var n = 1
 		for n != 0 {
 			buffer := make([]byte, 2048)
 			n, _ = peer.Read(buffer)
@@ -161,8 +173,8 @@ func handshake(peer *net.UDPConn, leader bool) (*EncryptedConn, error) {
 		pubkey, err := x509.ParsePKCS1PublicKey(pubkey_bytes)
 		enc := EncryptedConn{
 			privkey: priv_key,
-			pubkey: pubkey,
-			conn: peer,
+			pubkey:  pubkey,
+			conn:    peer,
 		}
 		return &enc, nil
 	}

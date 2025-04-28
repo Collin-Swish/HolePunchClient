@@ -84,7 +84,7 @@ func (self *EncryptedConn) WriteWithHeader(b []byte) (int, error) {
 }
 
 func (self *EncryptedConn) Read(b []byte) (int, error) {
-	buffer := make([]byte, 1024)
+	buffer := make([]byte, 2048)
 	n, err := self.conn.Read(buffer)
 	if err != nil {
 		return n, err
