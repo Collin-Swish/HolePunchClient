@@ -15,9 +15,9 @@ import (
 	"time"
 )
 
-func negotiate_connection(connection_name string) (*SymmetricEncryptedConn, error) {
+func negotiate_connection(connection_name string, server_ip string) (*SymmetricEncryptedConn, error) {
 	addr := net.UDPAddr{
-		IP:   net.ParseIP("172.232.24.105"),
+		IP:   net.ParseIP(server_ip),
 		Port: 2001,
 	}
 	conn, err := net.DialUDP("udp", nil, &addr)
