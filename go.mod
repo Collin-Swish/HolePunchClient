@@ -1,3 +1,3 @@
-module github.com/Collin-Swish/HolePunchClient/v1
+module github.com/Collin-Swish/HolePunchClient
 
 go 1.22.1
