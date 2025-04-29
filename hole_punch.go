@@ -117,9 +117,9 @@ func Handshake(peer *net.UDPConn, leader bool) (*SymmetricEncryptedConn, error) 
 		}
 		pubkey, err := x509.ParsePKCS1PublicKey(pubkey_bytes)
 		enc := EncryptedConn{
-			privkey: priv_key,
-			pubkey:  pubkey,
-			conn:    peer,
+			Privkey: priv_key,
+			Pubkey:  pubkey,
+			Conn:    peer,
 		}
 		if leader {
 			symkey := make([]byte, 32)
@@ -130,9 +130,9 @@ func Handshake(peer *net.UDPConn, leader bool) (*SymmetricEncryptedConn, error) 
 				return nil, err
 			}
 			return &SymmetricEncryptedConn{
-				block: block,
-				conn: peer,
-				key: symkey,
+				Block: block,
+				Conn: peer,
+				Key: symkey,
 			}, nil
 		} else {
 			symkey := make([]byte, 32)
@@ -142,9 +142,9 @@ func Handshake(peer *net.UDPConn, leader bool) (*SymmetricEncryptedConn, error) 
 				return nil, err
 			}
 			return &SymmetricEncryptedConn{
-				block: block,
-				conn: peer,
-				key: symkey,
+				Block: block,
+				Conn: peer,
+				Key: symkey,
 			}, nil
 		}
 	}

@@ -14,9 +14,9 @@ import (
 )
 
 type EncryptedConn struct {
-	privkey *rsa.PrivateKey
-	pubkey  *rsa.PublicKey
-	conn    *net.UDPConn
+	Privkey *rsa.PrivateKey
+	Pubkey  *rsa.PublicKey
+	Conn    *net.UDPConn
 }
 
 func PrefixBuffer(buffer []byte) []byte {
@@ -52,46 +52,46 @@ func NewEncryptedServerConn(conn *net.UDPConn) (*EncryptedConn, error) {
 		return nil, err
 	}
 	result := EncryptedConn{
-		privkey: priv_key,
-		pubkey:  server_public_key,
-		conn:    conn,
+		Privkey: priv_key,
+		Pubkey:  server_public_key,
+		Conn:    conn,
 	}
 	return &result, nil
 }
 
 func (self *EncryptedConn) LocalAddr() net.Addr {
-	return self.conn.LocalAddr()
+	return self.Conn.LocalAddr()
 }
 
 func (self *EncryptedConn) Close() error {
-	return self.conn.Close()
+	return self.Conn.Close()
 }
 
 func (self *EncryptedConn) Write(b []byte) (int, error) {
-	encrypted, err := rsa.EncryptOAEP(sha1.New(), rand.Reader, self.pubkey, b, nil)
-	fmt.Println(self.pubkey.Size())
+	encrypted, err := rsa.EncryptOAEP(sha1.New(), rand.Reader, self.Pubkey, b, nil)
+	fmt.Println(self.Pubkey.Size())
 	if err != nil {
 		return 0, err
 	}
-	return self.conn.Write(encrypted)
+	return self.Conn.Write(encrypted)
 }
 
 func (self *EncryptedConn) WriteWithHeader(b []byte) (int, error) {
-	encrypted, err := rsa.EncryptOAEP(sha1.New(), rand.Reader, self.pubkey, b, nil)
+	encrypted, err := rsa.EncryptOAEP(sha1.New(), rand.Reader, self.Pubkey, b, nil)
 	if err != nil {
 		return 0, err
 	}
-	return self.conn.Write(PrefixBuffer(encrypted))
+	return self.Conn.Write(PrefixBuffer(encrypted))
 }
 
 func (self *EncryptedConn) Read(b []byte) (int, error) {
 	buffer := make([]byte, 2048)
-	n, err := self.conn.Read(buffer)
+	n, err := self.Conn.Read(buffer)
 	if err != nil {
 		return n, err
 	}
 	buffer = buffer[:n]
-	decrypted, err := rsa.DecryptOAEP(sha1.New(), rand.Reader, self.privkey, buffer, nil)
+	decrypted, err := rsa.DecryptOAEP(sha1.New(), rand.Reader, self.Privkey, buffer, nil)
 	copy(b, decrypted)
 	return len(decrypted), nil
 }
