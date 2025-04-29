@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-func negotiate_connection(connection_name string, server_ip string) (*SymmetricEncryptedConn, error) {
+func NegotiateConnection(connection_name string, server_ip string) (*SymmetricEncryptedConn, error) {
 	addr := net.UDPAddr{
 		IP:   net.ParseIP(server_ip),
 		Port: 2001,
@@ -54,12 +54,12 @@ func negotiate_connection(connection_name string, server_ip string) (*SymmetricE
 				fmt.Println(err)
 			}
 			leader := sections[3] == "LEADER"
-			return handshake(peer, leader)
+			return Handshake(peer, leader)
 		}
 	}
 }
 
-func handshake(peer *net.UDPConn, leader bool) (*SymmetricEncryptedConn, error) {
+func Handshake(peer *net.UDPConn, leader bool) (*SymmetricEncryptedConn, error) {
 	fmt.Printf("Entering handshake leader: %v\n", leader)
 	attempts := 0
 	for leader && attempts < 10 {
